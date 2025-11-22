@@ -12,37 +12,89 @@ The approach emphasizes:
 
 ---
 
-## 🛠️ Model Training Pipeline
 
-### 1. 📥 Data Loading
-- Reads driving log data from `driving_log.csv`.
-- Utilizes images from **center**, **left**, and **right** cameras.
-- Combines image paths and steering measurements.
+## 🚀 Model Training Summary
 
-### 2. 🎨 Data Augmentation
-To improve model generalization, the following augmentations are applied:
-- **Flipping** images horizontally and reversing the steering angle.
-- **Brightness adjustment** to simulate varying lighting conditions.
-- **Camera offset correction** for left/right images with adjusted steering angles.
-- **Shuffling** and **balancing** data distribution.
 
-### 3. 🧠 Model Architecture
-A CNN model inspired by **NVIDIA’s end-to-end self-driving car architecture** was built using Keras:
-- Input normalization and cropping layers.
-- Multiple convolutional layers with ReLU activation.
-- Fully connected layers with dropout regularization.
-- Final output: single neuron predicting the **steering angle**.
 
-### 4. ⚙️ Training Configuration
-- Optimizer: `Adam`
-- Loss Function: `Mean Squared Error (MSE)`
-- Epochs: Configurable (default: 5–10 recommended)
-- Batch Size: 64
-- Early stopping and model checkpointing are implemented for stability.
+### 📥 1) Data Loading & Preprocessing — Robust & Reproducible
+The project follows the **Udacity-style** dataset with `driving_log.csv` and three camera streams:
 
-### 5. 📊 Visualization
-- Loss vs Epochs plot to observe convergence.
-- Model testing results with optional prediction overlay visuals.
+- **Center / Left / Right** camera frames are loaded and paired with steering values.
+- **Path Normalization:** `path_leaf()` ensures consistent filename handling across systems.
+- **Steering Map:** every image is mapped to its steering measurement so the model learns direct image → action mappings.
+
+---
+
+### 📊 2) Data Balancing & Distribution Control — Smart & Effective
+Driving data is heavily biased toward “straight” frames. We fix that with a statistically sound approach:
+
+- Visualize steering distribution into **25 bins**.
+- **Cap each bin at 400 samples** to avoid learning a “always-straight” policy.
+- Shuffle and resample to keep training diverse.
+
+**Impact:** Balanced training data improves turn detection, reduces bias, and produces safer steering behavior.
+
+---
+
+### 🎨 3) Data Augmentation Pipeline — Real-World Robustness
+On-the-fly augmentation increases dataset variety without extra storage:
+
+- **Horizontal Flip** — mirror images and invert steering (angle → `-angle`).
+- **Brightness Variation** — HSV-based random brightness simulates day/night/shadows.
+- **Camera Offset Correction** — left/right frames use steering offsets to teach recovery behavior.
+- **Random Shifts (x/y)** — simulates lateral drift and camera jitter.
+- **Crop & Normalize** — remove sky/hood and normalize pixels to `[-1, 1]` for stable training.
+  <Figure size 1080x3600 with 20 Axes><img width="1067" height="3524" alt="image" src="https://github.com/user-attachments/assets/5baae6a4-f1bc-4705-b427-1509ed59717e" />
+
+  <Figure size 1080x720 with 2 Axes><img width="1067" height="293" alt="image" src="https://github.com/user-attachments/assets/1d84bc59-347a-4515-81ab-dc1d64a0fbd4" />
+
+
+**Why this is strong:** augmentation simulates realistic edge cases (glare, shadow, slight off-center) so the DNN generalizes to new roads.
+
+---
+
+### 🧠 4) Model Architecture — NVIDIA-Style CNN (DNN)
+A compact, production-minded Deep Neural Network tuned for steering regression:
+
+- **Preprocessing:** Cropping + normalization layers inside the model for portability.
+- **Convolutional Backbone:** 5 Conv layers with ReLU to capture low→high level visual features (lanes, curbs, shadows).
+- **Fully Connected Head:** Dense layers with dropout for robust decision-making.
+- **Output:** Single linear neuron predicting the continuous steering angle.
+
+**Design goal:** real-time-capable, small enough for deployment, powerful enough for complex road geometry.
+
+---
+
+### ⚙️ 5) Training Configuration — Stable & Reproducible
+Training follows best-practice defaults and production controls:
+
+| Component      | Setting |
+|----------------|---------|
+| Optimizer      | Adam |
+| Loss           | Mean Squared Error (MSE) |
+| Batch size     | 64 |
+| Epochs         | 5–10 (adjust per validation curve) |
+| Callbacks      | EarlyStopping, ModelCheckpoint |
+
+**Generator-based training:** Augmentation is applied inside a generator for memory-efficiency and infinite variety.
+
+---
+
+### 📈 6) Training & Evaluation — Track, Visualize, Validate
+- **Loss vs Epochs** charts to monitor convergence and detect overfitting.
+- **Qualitative tests:** Overlay predicted steering on sample frames for visual sanity-checks.
+- **Quantitative checks:** MSE on validation set and sample-driven error analysis.
+
+---
+
+### 🏁 7) Final Output — Production-Oriented Results
+The trained model:
+
+- Predicts steering angle from a single camera frame.
+- Handles lighting variation, lane curvature, and small lateral drifts.
+- Produces smooth, stable steering suitable for simulator deployment.
+
 
 ---
 
